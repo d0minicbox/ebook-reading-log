@@ -239,7 +239,7 @@ async function replaceAll(list){
 }
 
 const ridiUrl=b=>b.ridi
-  ?`https://ridibooks.com/books/${encodeURIComponent(b.ridi)}?_s=search&_q=${encodeURIComponent(b.title)}&_rdt_sid=SearchBookListWithTab&_rdt_idx=0`
+  ?`https://ridibooks.com/books/${encodeURIComponent(b.ridi)}`
   :`https://ridibooks.com/search?q=${encodeURIComponent(b.title)}`;
 
 function renderStats(){
