@@ -67,13 +67,10 @@ a{color:var(--accent)}
 a.ttl{color:inherit;text-decoration:none}
 a.ttl:hover{color:var(--accent);text-decoration:underline}
 .tower .bk.part{opacity:.65;border:2px dashed rgba(0,0,0,.35)}
-.tower .top{display:flex;flex-direction:column;align-items:center;margin-bottom:2px}
-.tower .bubble{border:2px solid var(--accent);border-radius:14px;padding:6px 14px;font-size:14px;background:var(--card);position:relative;margin-bottom:10px}
-.tower .bubble:after{content:"";position:absolute;left:50%;bottom:-9px;width:12px;height:12px;background:var(--card);
-  border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateX(-50%) rotate(45deg)}
-.tower .mascot{font-size:64px;line-height:1}
+.rd{text-align:center;color:#1E9EFF;padding:22px 0 8px}
+.rd-num{font-size:24px;font-weight:700;line-height:1.3}
+.rd-msg{font-size:14px;margin-top:2px}
 .tw-info b{font-size:20px}
-.lvl{margin:8px 0 14px}
 .months{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:90px;margin-top:6px}
 .months div{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative;opacity:.85}
 .months div span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
@@ -302,7 +299,10 @@ function renderList(){
 }
 
 // ── 책탑: 읽은 글자 수(만자)만큼 높이가 쌓이고, 높이에 따라 마스코트가 성장 ──
-const LEVELS=[[0,'🌱','책씨앗'],[500,'🐣','책병아리'],[1500,'🦉','책부엉이'],[3000,'🦊','책여우'],[5000,'🐉','책용']]; // 만자 기준
+// 읽은 글자 수(만자) 구간별 한마디 — 위에서부터 처음 조건에 맞는 문구를 쓴다
+const TIERS=[[5000,'경지에 도달한 ‘리디 Master’'],[4000,'상위 1%의 활자 중독자'],[3000,'밥은 챙겨 드시면서 읽으시죠?'],
+  [2000,'대..대단합니다. 읽은 글자 2,000만 자 돌파!'],[1000,'단언컨대 이 정도면 어디 가서 책으로 꿀리진 않을 거예요.'],
+  [0,'읽은 글자 수로는 아직 평균에 못 미쳐요ㅠ']];
 const COLORS=['#EDCD95','#EDB899','#B8B5F2','#BAD6F6','#B8B8B8'];
 // 책 한 권의 높이(px) = 12 + 글자 수(만자) × 0.4, 최소 14 · 최대 110.
 // 글자 수가 비어 있으면 권수 × 11 을 만자로 추정한다 (한 권 평균 약 11.2만자).
@@ -333,9 +333,7 @@ function renderTower(){
   if(!ys.has(towerYear)) towerYear=now;
   const items=towerItems(String(towerYear));
   const total=items.reduce((a,i)=>a+i.pages,0);
-  let li=0; LEVELS.forEach((l,i)=>{if(total>=l[0]) li=i});
-  const cur=LEVELS[li], next=LEVELS[li+1];
-  const pct=next?Math.round((total-cur[0])/(next[0]-cur[0])*100):100;
+  const tier=TIERS.find(t=>total>=t[0]);
   const doneCount=items.filter(i=>!i.part).length;
   const mc=Array(12).fill(0);
   items.filter(i=>!i.part).forEach(i=>{const m=+(i.at||'').slice(5,7);if(m>=1&&m<=12) mc[m-1]++});
@@ -350,15 +348,13 @@ function renderTower(){
       title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
   }).join('');
   $('#tw').innerHTML=`
-    <div class="tw-head"><b>📚 ${towerYear}년 책탑</b>
+    <div class="tw-head"><b>${towerYear}년 책탑</b>
       <select id="twyear">${years.map(y=>`<option ${y===towerYear?'selected':''}>${y}</option>`).join('')}</select></div>
+    <div class="rd"><div class="rd-num">${Math.round(total).toLocaleString()} 만자</div><div class="rd-msg">${tier[1]}</div></div>
     <div class="tw-body">
-      <div class="tower"><div class="floor"></div>${stack}<div class="top"><div class="bubble">${cur[2]} (${Math.round(total).toLocaleString()}만자)</div><div class="mascot">${cur[1]}</div></div></div>
+      <div class="tower"><div class="floor"></div>${stack}</div>
       <div class="tw-info">
-        <b>${Math.round(total).toLocaleString()}만자</b> <span class="meta">· 완독 ${doneCount}권</span>
-        <div class="lvl">${cur[1]} <b style="font-size:15px">${cur[2]}</b>
-          ${next?`<div class="meta">다음 단계 ${next[2]}${next[1]}까지 ${Math.round(next[0]-total).toLocaleString()}만자</div>`:'<div class="meta">최고 단계예요!</div>'}
-          <div class="bar"><i style="width:${pct}%"></i></div></div>
+        <div class="meta">${towerYear}년 완독 <b>${doneCount}권</b></div>
         <div class="meta">월별 완독 권수</div>
         <div class="months">${mc.map(n=>`<div style="height:${Math.round(n/mx*100)}%"><span>${n||''}</span></div>`).join('')}</div>
         <div class="mlab">${mc.map((_,i)=>`<span>${i+1}</span>`).join('')}</div>
