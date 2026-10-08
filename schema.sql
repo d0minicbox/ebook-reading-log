@@ -10,6 +10,7 @@ create table if not exists public.books (
   progress    int  not null default 0 check (progress between 0 and 100),
   pages       int  not null default 0 check (pages >= 0),
   ridi        text,
+  price       int  not null default 0 check (price >= 0),
   chars       numeric(8,1) not null default 0 check (chars >= 0),
   volumes     int  not null default 0 check (volumes >= 0),
   rating      int  not null default 0 check (rating between 0 and 5),
@@ -31,3 +32,4 @@ alter table public.books add column if not exists volumes int not null default 0
 alter table public.books drop constraint if exists books_status_check;
 alter table public.books add constraint books_status_check check (status in ('reading','done','wish','dropped'));
 alter table public.books add column if not exists ridi text;
+alter table public.books add column if not exists price int not null default 0 check (price >= 0);
