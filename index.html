@@ -211,11 +211,32 @@ async function removeBook(id){
   await loadBooks();
 }
 async function replaceAll(list){
-  if(!cloud){books=list;return saveLocal()}
-  const {error}=await sb.from('books').insert(list.map(toRow));
-  if(error) alert('가져오기 실패: '+error.message);
+  const key=x=>((x.title||'')+'|'+(x.author||'')).replace(/\s+/g,'').toLowerCase();
+  const have=new Map(books.map(x=>[key(x),x]));
+  const ins=[],ups=[];
+  for(const it of list){
+    const m=have.get(key(it));
+    if(!m){ins.push(it);continue}
+    // 이미 있는 책은 중복 추가하지 않고, 비어 있는 정보(리디 번호·글자 수·권수)만 채운다
+    const merged={...m,ridi:m.ridi||it.ridi||'',chars:m.chars||it.chars||0,volumes:m.volumes||it.volumes||0};
+    if(merged.ridi!==m.ridi||merged.chars!==m.chars||merged.volumes!==m.volumes) ups.push(merged);
+  }
+  if(!cloud){books=books.map(x=>ups.find(u=>u.id===x.id)||x).concat(ins.map((x,i)=>({id:Date.now()+i,...x})));saveLocal();alert(`추가 ${ins.length}권, 보완 ${ups.length}권`);return}
+  for(let i=0;i<ins.length;i+=100){
+    const {error}=await sb.from('books').insert(ins.slice(i,i+100).map(toRow));
+    if(error){alert('가져오기 실패: '+error.message);break}
+  }
+  for(const u of ups){
+    const {error}=await sb.from('books').update({ridi:u.ridi||null,chars:u.chars,volumes:u.volumes}).eq('id',u.id);
+    if(error){alert('보완 실패: '+error.message);break}
+  }
+  alert(`추가 ${ins.length}권, 보완 ${ups.length}권`);
   await loadBooks();
 }
+
+const ridiUrl=b=>b.ridi
+  ?`https://ridibooks.com/books/${encodeURIComponent(b.ridi)}?_s=search&_q=${encodeURIComponent(b.title)}&_rdt_sid=SearchBookListWithTab&_rdt_idx=0`
+  :`https://ridibooks.com/search?q=${encodeURIComponent(b.title)}`;
 
 function renderStats(){
   const yr=new Date().getFullYear();
@@ -267,7 +288,7 @@ function renderList(){
       </div>
       <div class="acts">
         <a class="btn ghost sm" style="text-decoration:none;color:var(--text)" target="_blank" rel="noopener"
-           href="${b.ridi?'https://ridibooks.com/books/'+encodeURIComponent(b.ridi):'https://ridibooks.com/search?q='+encodeURIComponent(b.title)+'&category_id=4100'}">리디에서 보기</a>
+           href="${ridiUrl(b)}">리디에서 보기</a>
         <button class="btn ghost sm" data-edit="${b.id}">수정</button>
         <button class="btn danger sm" data-del="${b.id}">삭제</button>
       </div>
