@@ -33,11 +33,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sum-tabs .st{border:0;background:transparent;font-size:15px;color:var(--muted);padding:4px 10px;border-radius:16px;cursor:pointer}
 .sum-tabs .st.on{background:#1E9EFF;color:#fff}
 .sum-tabs select{margin-left:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
-.sum-row{display:grid;grid-template-columns:repeat(3,1fr);padding:14px 0;border-bottom:1px solid var(--line)}
+.sum-row{display:grid;grid-template-columns:repeat(4,1fr);padding:14px 0;border-bottom:1px solid var(--line)}
 .sum-row div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:0 4px;min-width:0}
 .sum-row div+div{border-left:1px solid var(--line)}
 .sum-row span{color:var(--muted);font-size:13px}
-.sum-row b{font-size:clamp(13px,3.9vw,20px);white-space:nowrap}
+.sum-row b{font-size:clamp(14px,3.9vw,20px);white-space:nowrap}
+@media (max-width:520px){.sum-row{grid-template-columns:repeat(2,1fr);gap:14px 0}.sum-row div:nth-child(odd){border-left:0}.sum-row div:nth-child(n+3){border-top:1px solid var(--line);padding-top:14px}}
 .goal{background:var(--card);border-radius:12px;padding:14px;margin-bottom:20px;box-shadow:var(--shadow)}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;background:var(--accent)}
@@ -254,24 +255,31 @@ const ridiUrl=b=>b.ridi
 
 // 첫 화면 요약: 전체 / 연간 — 읽은 책(완독) 수, 책값, 읽은 글자 수
 const yearsOf=()=>{const ys=new Set([new Date().getFullYear()]);books.forEach(b=>{const y=+(b.end||'').slice(0,4);if(y) ys.add(y)});return [...ys].sort((a,b)=>b-a)};
+// 연도 드롭다운은 한 번만 만들고 그대로 둔다 (선택하는 순간 지우고 다시 만들면 일부 브라우저에서 꼬일 수 있음)
+function fillYears(sel,years){
+  const key=years.join(',');
+  if(sel.dataset.ys!==key){sel.innerHTML=years.map(y=>`<option>${y}</option>`).join('');sel.dataset.ys=key}
+  sel.value=String(towerYear);
+}
 function renderStats(){
   const years=yearsOf(); if(!years.includes(towerYear)) towerYear=new Date().getFullYear();
   const done=books.filter(b=>b.status==='done'&&(sumMode==='all'||(b.end||'').startsWith(String(towerYear))));
   const price=done.reduce((a,b)=>a+(+b.price||0),0);
   const chars=done.reduce((a,b)=>a+estChars(b.chars,b.volumes),0);
-  $('#sum').innerHTML=`
-    <div class="sum-tabs">
-      <button class="st ${sumMode==='all'?'on':''}" data-m="all">전체</button>
-      <button class="st ${sumMode==='year'?'on':''}" data-m="year">연간</button>
-      ${sumMode==='year'?`<select id="sumyear">${years.map(y=>`<option ${y===towerYear?'selected':''}>${y}</option>`).join('')}</select>`:''}
-    </div>
-    <div class="sum-row">
-      <div><span>읽은 책</span><b>${done.length.toLocaleString()}권</b></div>
+  const vols=done.reduce((a,b)=>a+(+b.volumes||0),0);
+  const box=$('#sum');
+  if(!box.firstChild){
+    box.innerHTML=`<div class="sum-tabs"><button class="st" data-m="all">전체</button><button class="st" data-m="year">연간</button><select id="sumyear" hidden></select></div><div class="sum-row"></div>`;
+    box.querySelectorAll('.st').forEach(e=>e.onclick=()=>{sumMode=e.dataset.m;renderStats()});
+    $('#sumyear').onchange=e=>{towerYear=+e.target.value;render()};
+  }
+  box.querySelectorAll('.st').forEach(e=>e.classList.toggle('on',e.dataset.m===sumMode));
+  const sy=$('#sumyear'); sy.hidden=sumMode!=='year'; fillYears(sy,years);
+  box.querySelector('.sum-row').innerHTML=`
+      <div><span>읽은 책</span><b>${done.length.toLocaleString()}작품</b></div>
+      <div><span>읽은 권수</span><b>${vols.toLocaleString()}권</b></div>
       <div><span>책값</span><b>${price.toLocaleString()}원</b></div>
-      <div><span>읽은 글자 수</span><b>${Math.round(chars*10000).toLocaleString()}자</b></div>
-    </div>`;
-  document.querySelectorAll('.sum-tabs .st').forEach(e=>e.onclick=()=>{sumMode=e.dataset.m;renderStats()});
-  const sy=$('#sumyear'); if(sy) sy.onchange=e=>{towerYear=+e.target.value;render()};
+      <div><span>읽은 글자 수</span><b>${Math.round(chars*10000).toLocaleString()}자</b></div>`;
 }
 
 function renderTabs(){
@@ -362,9 +370,13 @@ function renderTower(){
     return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" data-h="${h}" style="height:${h}px;width:${w}%;background:${c};transform:translateX(${off}px)"
       title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
   }).join('');
-  $('#tw').innerHTML=`
-    <div class="tw-head"><b>${towerYear}년 책탑</b>
-      <select id="twyear">${years.map(y=>`<option ${y===towerYear?'selected':''}>${y}</option>`).join('')}</select></div>
+  const tw=$('#tw');
+  if(!tw.firstChild){
+    tw.innerHTML=`<div class="tw-head"><b id="twtitle"></b><select id="twyear"></select></div><div id="twbody"></div>`;
+    $('#twyear').onchange=e=>{towerYear=+e.target.value;renderStats();renderTower()};
+  }
+  $('#twtitle').textContent=`${towerYear}년 책탑`; fillYears($('#twyear'),years);
+  $('#twbody').innerHTML=`
     <div class="tw-body">
       <div class="tower"><div class="floor"></div>${stack}<div class="rd"><div class="rd-num">${Math.round(total).toLocaleString()} 만자</div><div class="rd-msg">${tier[1]}</div></div></div>
       <div class="tw-info">
@@ -380,7 +392,6 @@ function renderTower(){
     let fs=Math.max(8,Math.min(13,(+a.dataset.h)-4)); a.style.fontSize=fs+'px';
     while(a.scrollWidth>a.clientWidth&&fs>8){fs-=0.5;a.style.fontSize=fs+'px'}
   });
-  $('#twyear').onchange=e=>{towerYear=+e.target.value;renderStats();renderTower()};
 }
 function render(){renderStats();renderTower();renderTabs();renderList()}
 
