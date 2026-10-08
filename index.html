@@ -33,10 +33,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sum-tabs .st{border:0;background:transparent;font-size:15px;color:var(--muted);padding:4px 10px;border-radius:16px;cursor:pointer}
 .sum-tabs .st.on{background:#1E9EFF;color:#fff}
 .sum-tabs select{margin-left:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
-.sum-row{display:flex;flex-wrap:wrap;gap:8px 32px;padding:14px 4px;border-bottom:1px solid var(--line)}
-.sum-row div{display:flex;align-items:baseline;gap:8px}
-.sum-row span{color:var(--muted);font-size:14px}
-.sum-row b{font-size:20px}
+.sum-row{display:grid;grid-template-columns:repeat(3,1fr);padding:14px 0;border-bottom:1px solid var(--line)}
+.sum-row div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:0 4px;min-width:0}
+.sum-row div+div{border-left:1px solid var(--line)}
+.sum-row span{color:var(--muted);font-size:13px}
+.sum-row b{font-size:clamp(13px,3.9vw,20px);white-space:nowrap}
 .goal{background:var(--card);border-radius:12px;padding:14px;margin-bottom:20px;box-shadow:var(--shadow)}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;background:var(--accent)}
@@ -177,6 +178,11 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
 </dialog>
 
 <script>
+function showErr(m){let b=document.getElementById('errbar');if(!b){b=document.createElement('div');b.id='errbar';
+  b.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;background:#d03050;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;z-index:99';document.body.appendChild(b)}
+  b.textContent='오류: '+m}
+window.addEventListener('error',e=>showErr(e.message));
+window.addEventListener('unhandledrejection',e=>showErr((e.reason&&e.reason.message)||String(e.reason)));
 const KEY='ebook-log-v1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -262,7 +268,7 @@ function renderStats(){
     <div class="sum-row">
       <div><span>읽은 책</span><b>${done.length.toLocaleString()}권</b></div>
       <div><span>책값</span><b>${price.toLocaleString()}원</b></div>
-      <div><span>읽은 글자 수</span><b>${Math.round(chars).toLocaleString()}만자</b></div>
+      <div><span>읽은 글자 수</span><b>${Math.round(chars*10000).toLocaleString()}자</b></div>
     </div>`;
   document.querySelectorAll('.sum-tabs .st').forEach(e=>e.onclick=()=>{sumMode=e.dataset.m;renderStats()});
   const sy=$('#sumyear'); if(sy) sy.onchange=e=>{towerYear=+e.target.value;render()};
