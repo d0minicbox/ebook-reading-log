@@ -61,13 +61,13 @@ a{color:var(--accent)}
 .tw-body{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:24px;margin-top:12px}
 .tower{display:flex;flex-direction:column-reverse;align-items:center;width:100%;padding:8px 0 0}
 .tower .floor{width:100%;height:8px;min-height:8px;background:var(--line);border-radius:4px;flex:none}
-.tower .bk{flex:none;border-radius:8px;margin-top:3px;font-size:13px;line-height:1.3;color:#fff;display:flex;align-items:center;
-  justify-content:center;text-align:center;padding:4px 12px;word-break:keep-all;overflow-wrap:anywhere;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
-.tower a.bk{text-decoration:none;color:#fff;transition:filter .15s}
-.tower a.bk:hover{filter:brightness(1.12)}
+.tower .bk{flex:none;border-radius:8px;margin-top:3px;font-size:13px;line-height:1.3;color:#2b2b33;display:flex;align-items:center;
+  justify-content:center;text-align:center;padding:4px 12px;word-break:keep-all;overflow-wrap:anywhere;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.tower a.bk{text-decoration:none;color:#2b2b33;transition:filter .15s}
+.tower a.bk:hover{filter:brightness(.95)}
 a.ttl{color:inherit;text-decoration:none}
 a.ttl:hover{color:var(--accent);text-decoration:underline}
-.tower .bk.part{opacity:.6;border:2px dashed rgba(255,255,255,.8)}
+.tower .bk.part{opacity:.65;border:2px dashed rgba(0,0,0,.35)}
 .tower .top{display:flex;flex-direction:column;align-items:center;margin-bottom:2px}
 .tower .bubble{border:2px solid var(--accent);border-radius:14px;padding:6px 14px;font-size:14px;background:var(--card);position:relative;margin-bottom:10px}
 .tower .bubble:after{content:"";position:absolute;left:50%;bottom:-9px;width:12px;height:12px;background:var(--card);
@@ -304,7 +304,7 @@ function renderList(){
 
 // ── 책탑: 읽은 글자 수(만자)만큼 높이가 쌓이고, 높이에 따라 마스코트가 성장 ──
 const LEVELS=[[0,'🌱','책씨앗'],[500,'🐣','책병아리'],[1500,'🦉','책부엉이'],[3000,'🦊','책여우'],[5000,'🐉','책용']]; // 만자 기준
-const COLORS=['#c9695f','#d9a441','#5a9e7c','#5b8fc7','#8a74c9','#c96b97','#4f9a96','#9b7e6b'];
+const COLORS=['#EDCD95','#EDB899','#B8B5F2','#BAD6F6','#B8B8B8'];
 const DEFAULT_CHARS=50, PX_PER_CHAR=0.6;
 let towerYear=new Date().getFullYear();
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
@@ -335,10 +335,12 @@ function renderTower(){
   const mc=Array(12).fill(0);
   items.filter(i=>!i.part).forEach(i=>{const m=+(i.at||'').slice(5,7);if(m>=1&&m<=12) mc[m-1]++});
   const mx=Math.max(1,...mc);
+  let prevColor=-1;
   const stack=items.map((i,k)=>{
     const h=Math.max(34,Math.min(80,Math.round(i.pages*PX_PER_CHAR)));
     const w=84+(hash(i.b.title)%17), off=((hash(i.b.title+k)%17)-8);
-    const c=COLORS[hash(i.b.title)%COLORS.length];
+    let ci=hash(i.b.title)%COLORS.length; if(ci===prevColor) ci=(ci+1)%COLORS.length; prevColor=ci; // 바로 옆 책과 같은 색이 겹치지 않게
+    const c=COLORS[ci];
     return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" style="min-height:${h}px;width:${w}%;background:${c};transform:translateX(${off}px)"
       title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
   }).join('');
