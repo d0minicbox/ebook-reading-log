@@ -128,7 +128,7 @@ a{color:var(--accent)}
 
 <dialog id="dlg">
   <form method="dialog" id="form">
-    <input type="hidden" name="ridi">
+    <label>리디북스 링크 또는 책 번호 (선택)<input name="ridi" placeholder="https://ridibooks.com/books/120040877"></label>
     <label>제목 *<input name="title" required></label>
     <div class="row">
       <label>저자<input name="author"></label>
@@ -373,6 +373,7 @@ $('#add').onclick=()=>openForm();
 $('#cancel').onclick=()=>$('#dlg').close();
 $('#form').onsubmit=async()=>{
   const d=Object.fromEntries(new FormData($('#form')));
+  d.ridi=(String(d.ridi||'').match(/books\/(\d+)/)||String(d.ridi||'').match(/^\s*(\d+)\s*$/)||[,''])[1];
   d.rating=+d.rating; d.chars=Math.max(0,+d.chars||0); d.volumes=Math.max(0,parseInt(d.volumes)||0); d.progress=Math.max(0,Math.min(100,+d.progress||0));
   if(d.status==='done'){d.progress=100; if(!d.end) d.end=new Date().toISOString().slice(0,10)}
   await saveBook(d,editId);render();
