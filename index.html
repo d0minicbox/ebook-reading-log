@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나의 이북 서재</title>
+<style>
+:root{
+  --bg:#f5f7fa;--card:#fff;--text:#1c2430;--muted:#6b7684;--line:#e3e8ee;
+  --accent:#1e9eff;--accent-ink:#fff;--good:#18a058;--warn:#f0a020;--danger:#d03050;
+  --shadow:0 1px 3px rgba(20,30,50,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12161c;--card:#1b212a;--text:#e8edf3;--muted:#8f9bab;--line:#2a323d;--shadow:none}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:22px;margin:0}
+h1 small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+button,input,select,textarea{font:inherit;color:inherit}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--line)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--card);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:24px}
+.stat span{color:var(--muted);font-size:13px}
+.goal{background:var(--card);border-radius:12px;padding:14px;margin-bottom:20px;box-shadow:var(--shadow)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tools input,.tools select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.tools input[type=search]{flex:1;min-width:160px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:5px 14px;cursor:pointer}
+.tab.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.list{display:grid;gap:10px}
+.book{background:var(--card);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);display:grid;grid-template-columns:1fr auto;gap:6px 12px}
+.book h3{margin:0;font-size:16px}
+.meta{color:var(--muted);font-size:13px}
+.tag{display:inline-block;font-size:12px;border-radius:10px;padding:1px 9px;color:#fff;margin-right:6px}
+.tag.reading{background:var(--warn)}.tag.done{background:var(--good)}.tag.wish{background:var(--muted)}
+.stars{color:var(--warn);letter-spacing:1px}
+.memo{grid-column:1/-1;white-space:pre-wrap;font-size:14px;border-left:3px solid var(--line);padding-left:10px}
+.acts{display:flex;gap:6px;align-items:flex-start}
+.empty{text-align:center;color:var(--muted);padding:48px 0}
+dialog{border:0;border-radius:14px;padding:0;width:min(480px,94vw);background:var(--card);color:var(--text)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+form{padding:20px;display:grid;gap:12px}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+label input,label select,label textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--text)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+a{color:var(--accent)}
+@media (max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.book{grid-template-columns:1fr}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📚 나의 이북 서재<small>Ridibooks 독서기록</small></h1>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span class="meta" id="who"></span>
+      <button class="btn ghost sm" id="logout" hidden>로그아웃</button>
+      <button class="btn ghost sm" id="export">내보내기</button>
+      <button class="btn ghost sm" id="import">가져오기</button>
+      <input type="file" id="file" accept="application/json" hidden>
+      <button class="btn" id="add">+ 책 추가</button>
+    </div>
+  </header>
+
+  <section class="goal" id="auth" hidden>
+    <b>로그인이 필요해요</b>
+    <div class="meta">이메일로 가입하면 어느 기기에서든 같은 기록을 볼 수 있어요.</div>
+    <form id="authform" onsubmit="return false" style="padding:12px 0 0">
+      <label>이메일<input type="email" id="email" autocomplete="email" required></label>
+      <label>비밀번호 (6자 이상)<input type="password" id="pw" autocomplete="current-password" minlength="6" required></label>
+      <div class="foot" style="justify-content:flex-start">
+        <button class="btn" id="signin">로그인</button>
+        <button class="btn ghost" id="signup">가입</button>
+      </div>
+      <div class="meta" id="authmsg"></div>
+    </form>
+  </section>
+  <div id="app">
+  <section class="stats" id="stats"></section>
+  <section class="goal" id="goal"></section>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="tools">
+    <input type="search" id="q" placeholder="제목·저자·메모 검색">
+    <select id="sort">
+      <option value="added">최근 추가순</option>
+      <option value="end">완독일순</option>
+      <option value="rating">별점순</option>
+      <option value="title">제목순</option>
+    </select>
+  </div>
+  <div class="list" id="list"></div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <label>제목 *<input name="title" required></label>
+    <div class="row">
+      <label>저자<input name="author"></label>
+      <label>상태
+        <select name="status">
+          <option value="reading">읽는 중</option>
+          <option value="done">완독</option>
+          <option value="wish">읽고 싶은 책</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label>시작일<input type="date" name="start"></label>
+      <label>완독일<input type="date" name="end"></label>
+    </div>
+    <div class="row">
+      <label>진행률 (%)<input type="number" name="progress" min="0" max="100" value="0"></label>
+      <label>별점
+        <select name="rating">
+          <option value="0">없음</option>
+          <option value="1">★</option><option value="2">★★</option><option value="3">★★★</option>
+          <option value="4">★★★★</option><option value="5">★★★★★</option>
+        </select>
+      </label>
+    </div>
+    <label>메모 / 인상 깊은 구절<textarea name="memo" rows="4"></textarea></label>
+    <div class="foot">
+      <button type="button" class="btn ghost" id="cancel">취소</button>
+      <button type="submit" class="btn">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY='ebook-log-v1', GKEY='ebook-goal-v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LABEL={reading:'읽는 중',done:'완독',wish:'읽고 싶은 책'};
+let books=[],goal=24,tab='all',editId=null,user=null;
+
+// Supabase 설정: SB_KEY 에 Publishable(anon) 키를 넣으면 클라우드 저장, 비워 두면 브라우저 저장
+const SB_URL='https://ooutcdzacyyxyamdqusi.supabase.co';
+const SB_KEY='sb_publishable_fceSxguB_2MhelFvS470bQ_Uez77JRa';
+const cloud=!SB_KEY.startsWith('PASTE');
+const sb=cloud?supabase.createClient(SB_URL,SB_KEY):null;
+const toRow=d=>({title:d.title,author:d.author||null,status:d.status,start_date:d.start||null,
+  end_date:d.end||null,progress:d.progress||0,rating:d.rating||0,memo:d.memo||null});
+const fromRow=r=>({id:r.id,title:r.title,author:r.author||'',status:r.status,start:r.start_date||'',
+  end:r.end_date||'',progress:r.progress,rating:r.rating,memo:r.memo||''});
+
+async function loadBooks(){
+  try{goal=+localStorage.getItem(GKEY)||24}catch{}
+  if(!cloud){
+    try{books=JSON.parse(localStorage.getItem(KEY))||[]}catch{books=[]}
+    return;
+  }
+  const {data,error}=await sb.from('books').select('*');
+  if(error){alert('불러오기 실패: '+error.message);books=[];return}
+  books=data.map(fromRow);
+}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(books))}catch{}}
+async function saveBook(d,id){
+  if(!cloud){
+    if(id) Object.assign(books.find(b=>b.id===id),d); else books.push({id:Date.now(),...d});
+    return saveLocal();
+  }
+  const q=id?sb.from('books').update(toRow(d)).eq('id',id):sb.from('books').insert(toRow(d));
+  const {error}=await q; if(error) alert('저장 실패: '+error.message);
+  await loadBooks();
+}
+async function removeBook(id){
+  if(!cloud){books=books.filter(b=>b.id!==id);return saveLocal()}
+  const {error}=await sb.from('books').delete().eq('id',id);
+  if(error) alert('삭제 실패: '+error.message);
+  await loadBooks();
+}
+async function replaceAll(list){
+  if(!cloud){books=list;return saveLocal()}
+  const {error}=await sb.from('books').insert(list.map(toRow));
+  if(error) alert('가져오기 실패: '+error.message);
+  await loadBooks();
+}
+
+function renderStats(){
+  const yr=new Date().getFullYear();
+  const done=books.filter(b=>b.status==='done');
+  const thisYear=done.filter(b=>(b.end||'').startsWith(yr));
+  const rated=done.filter(b=>b.rating>0);
+  const avg=rated.length?(rated.reduce((a,b)=>a+b.rating,0)/rated.length).toFixed(1):'-';
+  $('#stats').innerHTML=[
+    [books.length,'전체'],[books.filter(b=>b.status==='reading').length,'읽는 중'],
+    [thisYear.length,yr+'년 완독'],[avg,'평균 별점']
+  ].map(([n,l])=>`<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+  const pct=Math.min(100,Math.round(thisYear.length/goal*100));
+  $('#goal').innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px">
+    <span>${yr}년 목표 <b>${thisYear.length}</b> / ${goal}권 (${pct}%)</span>
+    <button class="btn ghost sm" id="setgoal">목표 변경</button></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>`;
+  $('#setgoal').onclick=()=>{
+    const v=parseInt(prompt('올해 목표 권수',goal),10);
+    if(v>0){goal=v;try{localStorage.setItem(GKEY,v)}catch{}render()}
+  };
+}
+
+function renderTabs(){
+  const t=[['all','전체'],['reading','읽는 중'],['done','완독'],['wish','읽고 싶은 책']];
+  $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab ${tab===k?'on':''}" data-k="${k}">${l}</button>`).join('');
+  document.querySelectorAll('.tab').forEach(e=>e.onclick=()=>{tab=e.dataset.k;render()});
+}
+
+function renderList(){
+  const q=$('#q').value.trim().toLowerCase(), s=$('#sort').value;
+  let l=books.filter(b=>(tab==='all'||b.status===tab)&&
+    (!q||[b.title,b.author,b.memo].some(x=>(x||'').toLowerCase().includes(q))));
+  const cmp={
+    added:(a,b)=>b.id-a.id,
+    end:(a,b)=>(b.end||'').localeCompare(a.end||''),
+    rating:(a,b)=>b.rating-a.rating,
+    title:(a,b)=>a.title.localeCompare(b.title,'ko')
+  }[s];
+  l.sort(cmp);
+  if(!l.length){$('#list').innerHTML='<div class="empty">기록된 책이 없어요. “+ 책 추가”로 시작해 보세요.</div>';return}
+  $('#list').innerHTML=l.map(b=>{
+    const dates=[b.start&&`시작 ${b.start}`,b.end&&`완독 ${b.end}`].filter(Boolean).join(' · ');
+    return `<article class="book">
+      <div>
+        <h3><span class="tag ${b.status}">${LABEL[b.status]}</span>${esc(b.title)}</h3>
+        <div class="meta">${esc(b.author||'저자 미상')}${dates?' · '+dates:''}
+          ${b.rating?` · <span class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</span>`:''}</div>
+        ${b.status==='reading'?`<div class="bar"><i style="width:${b.progress||0}%"></i></div><div class="meta">${b.progress||0}% 읽음</div>`:''}
+      </div>
+      <div class="acts">
+        <a class="btn ghost sm" style="text-decoration:none;color:var(--text)" target="_blank" rel="noopener"
+           href="https://ridibooks.com/search?q=${encodeURIComponent(b.title)}">리디에서 보기</a>
+        <button class="btn ghost sm" data-edit="${b.id}">수정</button>
+        <button class="btn danger sm" data-del="${b.id}">삭제</button>
+      </div>
+      ${b.memo?`<div class="memo">${esc(b.memo)}</div>`:''}
+    </article>`}).join('');
+  document.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>openForm(+e.dataset.edit));
+  document.querySelectorAll('[data-del]').forEach(e=>e.onclick=()=>{
+    if(confirm('이 기록을 삭제할까요?')) removeBook(+e.dataset.del).then(render)
+  });
+}
+function render(){renderStats();renderTabs();renderList()}
+
+function openForm(id){
+  editId=id||null;
+  const f=$('#form'); f.reset();
+  if(id){
+    const b=books.find(x=>x.id===id);
+    for(const k of ['title','author','status','start','end','progress','rating','memo']) f.elements[k].value=b[k]??'';
+  }
+  $('#dlg').showModal();
+}
+$('#add').onclick=()=>openForm();
+$('#cancel').onclick=()=>$('#dlg').close();
+$('#form').onsubmit=async()=>{
+  const d=Object.fromEntries(new FormData($('#form')));
+  d.rating=+d.rating; d.progress=Math.max(0,Math.min(100,+d.progress||0));
+  if(d.status==='done'){d.progress=100; if(!d.end) d.end=new Date().toISOString().slice(0,10)}
+  await saveBook(d,editId);render();
+};
+$('#q').oninput=renderList; $('#sort').onchange=renderList;
+
+$('#export').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(books,null,2)],{type:'application/json'}));
+  a.download='reading-log.json'; a.click();
+};
+$('#import').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{
+  try{
+    const data=JSON.parse(await e.target.files[0].text());
+    if(!Array.isArray(data)) throw 0;
+    await replaceAll(data); render();
+  }catch{alert('올바른 백업 파일이 아닙니다.')}
+  e.target.value='';
+};
+
+async function start(){
+  if(cloud){
+    const {data}=await sb.auth.getSession();
+    user=data.session?.user||null;
+    sb.auth.onAuthStateChange((_e,s)=>{const u=s?.user||null;if((u&&u.id)!==(user&&user.id)){user=u;start()}});
+  }
+  const needLogin=cloud&&!user;
+  $('#auth').hidden=!needLogin; $('#app').hidden=needLogin;
+  $('#add').hidden=$('#export').hidden=$('#import').hidden=needLogin;
+  $('#logout').hidden=!user; $('#who').textContent=user?user.email:'';
+  if(!needLogin){await loadBooks();render()}
+}
+async function authDo(kind){
+  const email=$('#email').value.trim(), password=$('#pw').value;
+  if(!email||password.length<6){$('#authmsg').textContent='이메일과 6자 이상의 비밀번호를 입력하세요.';return}
+  const {data,error}=kind==='up'?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+  if(error){$('#authmsg').textContent=error.message;return}
+  if(kind==='up'&&!data.session) $('#authmsg').textContent='가입 완료! 이메일 인증 메일을 확인한 뒤 로그인하세요.';
+}
+if(cloud){
+  $('#signin').onclick=()=>authDo('in'); $('#signup').onclick=()=>authDo('up');
+  $('#logout').onclick=()=>sb.auth.signOut();
+}
+start();
+</script>
+</body>
+</html>
