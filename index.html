@@ -72,7 +72,7 @@ a{color:var(--accent)}
 .tw-body{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:24px;margin-top:12px}
 .tower{display:flex;flex-direction:column-reverse;align-items:center;width:100%;padding:8px 0 0}
 .tower .floor{width:100%;height:8px;min-height:8px;background:var(--line);border-radius:4px;flex:none}
-.tower .bk{flex:none;width:100%;border-radius:8px;margin:0;line-height:1;color:#2b2b33;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tower .bk{flex:none;width:90%;border-radius:8px;margin:0;line-height:1;color:#2b2b33;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tower a.bk{text-decoration:none;color:#2b2b33}
 .tower a.bk:hover{opacity:.85}
 a.ttl{color:inherit;text-decoration:none}
@@ -364,9 +364,10 @@ function renderTower(){
   let prevColor=-1;
   const stack=items.map((i,k)=>{
     const h=i.part?bookHeight(i.pages,0):bookHeight(i.b.chars,i.b.volumes);
+    const off=(hash(i.b.title+k)%33)-16; // 너비는 모두 같고, 좌우로 살짝 어긋나게 쌓는다 (±16px)
     let ci=hash(i.b.title)%COLORS.length; if(ci===prevColor) ci=(ci+1)%COLORS.length; prevColor=ci; // 바로 옆 책과 같은 색이 겹치지 않게
     const c=COLORS[ci];
-    return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" data-h="${h}" style="height:${h}px;background:${c}"
+    return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" data-h="${h}" style="height:${h}px;background:${c};transform:translateX(${off}px)"
       title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
   }).join('');
   const tw=$('#tw');
