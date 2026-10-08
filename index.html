@@ -8,7 +8,7 @@
 :root{
   --bg:#f5f7fa;--card:#fff;--text:#1c2430;--muted:#6b7684;--line:#e3e8ee;
   --accent:#1e9eff;--accent-ink:#fff;--good:#18a058;--warn:#f0a020;--danger:#d03050;
-  --shadow:0 1px 3px rgba(20,30,50,.08);
+  --shadow:none;
 }
 @media (prefers-color-scheme:dark){
   :root{--bg:#12161c;--card:#1b212a;--text:#e8edf3;--muted:#8f9bab;--line:#2a323d;--shadow:none}
@@ -63,7 +63,7 @@ a{color:var(--accent)}
 .tower .floor{width:100%;height:8px;min-height:8px;background:var(--line);border-radius:4px;flex:none}
 .tower .bk{flex:none;border-radius:8px;margin:0;font-size:13px;line-height:1.3;color:#2b2b33;display:flex;align-items:center;
   justify-content:center;text-align:center;padding:4px 12px;word-break:keep-all;overflow-wrap:anywhere}
-.tower a.bk{text-decoration:none;color:#2b2b33;transition:filter .15s}
+.tower a.bk{text-decoration:none;color:#2b2b33}
 .tower a.bk:hover{opacity:.85}
 a.ttl{color:inherit;text-decoration:none}
 a.ttl:hover{color:var(--accent);text-decoration:underline}
