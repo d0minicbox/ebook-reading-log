@@ -63,6 +63,10 @@ a{color:var(--accent)}
 .tower .floor{width:100%;height:8px;min-height:8px;background:var(--line);border-radius:4px;flex:none}
 .tower .bk{flex:none;border-radius:8px;margin-top:3px;font-size:13px;line-height:1.3;color:#fff;display:flex;align-items:center;
   justify-content:center;text-align:center;padding:4px 12px;word-break:keep-all;overflow-wrap:anywhere;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.tower a.bk{text-decoration:none;color:#fff;transition:filter .15s}
+.tower a.bk:hover{filter:brightness(1.12)}
+a.ttl{color:inherit;text-decoration:none}
+a.ttl:hover{color:var(--accent);text-decoration:underline}
 .tower .bk.part{opacity:.6;border:2px dashed rgba(255,255,255,.8)}
 .tower .top{display:flex;flex-direction:column;align-items:center;margin-bottom:2px}
 .tower .bubble{border:2px solid var(--accent);border-radius:14px;padding:6px 14px;font-size:14px;background:var(--card);position:relative;margin-bottom:10px}
@@ -281,14 +285,12 @@ function renderList(){
     const dates=[b.start&&`시작 ${b.start}`,b.end&&`완독 ${b.end}`].filter(Boolean).join(' · ');
     return `<article class="book">
       <div>
-        <h3><span class="tag ${b.status}">${LABEL[b.status]}</span>${esc(b.title)}</h3>
+        <h3><span class="tag ${b.status}">${LABEL[b.status]}</span><a class="ttl" href="${ridiUrl(b)}" target="_blank" rel="noopener">${esc(b.title)}</a></h3>
         <div class="meta">${esc(b.author||'저자 미상')}${b.chars?' · '+b.chars+'만자':''}${b.volumes?' · '+b.volumes+'권':''}${dates?' · '+dates:''}
           ${b.rating?` · <span class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</span>`:''}</div>
         ${b.status==='reading'?`<div class="bar"><i style="width:${b.progress||0}%"></i></div><div class="meta">${b.progress||0}% 읽음</div>`:''}
       </div>
       <div class="acts">
-        <a class="btn ghost sm" style="text-decoration:none;color:var(--text)" target="_blank" rel="noopener"
-           href="${ridiUrl(b)}">리디에서 보기</a>
         <button class="btn ghost sm" data-edit="${b.id}">수정</button>
         <button class="btn danger sm" data-del="${b.id}">삭제</button>
       </div>
@@ -337,8 +339,8 @@ function renderTower(){
     const h=Math.max(34,Math.min(80,Math.round(i.pages*PX_PER_CHAR)));
     const w=84+(hash(i.b.title)%17), off=((hash(i.b.title+k)%17)-8);
     const c=COLORS[hash(i.b.title)%COLORS.length];
-    return `<div class="bk ${i.part?'part':''}" style="min-height:${h}px;width:${w}%;background:${c};transform:translateX(${off}px)"
-      title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</div>`;
+    return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" style="min-height:${h}px;width:${w}%;background:${c};transform:translateX(${off}px)"
+      title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
   }).join('');
   $('#tw').innerHTML=`
     <div class="tw-head"><b>📚 ${towerYear}년 책탑</b>
