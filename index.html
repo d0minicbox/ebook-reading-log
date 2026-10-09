@@ -412,7 +412,12 @@ let towerYear=new Date().getFullYear(), calMonth=null;
 function calHTML(yr,mo){
   const days=new Date(yr,mo,0).getDate(), first=new Date(yr,mo-1,1).getDay(), pre=yr+'-'+String(mo).padStart(2,'0');
   const byDay={}; let total=0;
-  books.filter(b=>b.status==='done'&&(b.end||'').startsWith(pre)).forEach(b=>{const d=+b.end.slice(8,10); (byDay[d]=byDay[d]||[]).push(b); total++});
+  // 완독한 날에는 늘 표시하고, 시작한 날이 완독한 날과 다르면 시작한 날에도 같은 이미지를 표시한다 (시작한 날이 다른 달이면 그 달 캘린더에 표시)
+  const put=(d,b)=>{(byDay[d]=byDay[d]||[]).push(b)};
+  books.filter(b=>b.status==='done').forEach(b=>{
+    if((b.end||'').startsWith(pre)){put(+b.end.slice(8,10),b); total++}
+    if(b.start&&b.start!==b.end&&b.start.startsWith(pre)) put(+b.start.slice(8,10),b);
+  });
   let cells='<div class="wd">일</div><div class="wd">월</div><div class="wd">화</div><div class="wd">수</div><div class="wd">목</div><div class="wd">금</div><div class="wd">토</div>';
   for(let i=0;i<first;i++) cells+='<div class="cd empty"></div>';
   for(let d=1;d<=days;d++){
