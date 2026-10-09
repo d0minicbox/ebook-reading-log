@@ -326,8 +326,10 @@ function fillYears(sel,years){
 let sumKey=null,sumRaf=0,sumTimer=0;
 function renderStats(){
   const years=yearsOf(); if(!years.includes(towerYear)) towerYear=new Date().getFullYear();
-  const done=books.filter(b=>b.status==='done'&&(sumMode==='all'||(b.end||'').startsWith(String(towerYear))));
-  const price=done.reduce((a,b)=>a+(+b.price||0),0);
+  // 하차한 작품도 '본 작품'으로 센다: 작품 수와 책값에는 포함하고, 권수와 글자 수는 완독한 작품만 합산한다
+  const seen=books.filter(b=>(b.status==='done'||b.status==='dropped')&&(sumMode==='all'||(b.end||'').startsWith(String(towerYear))));
+  const done=seen.filter(b=>b.status==='done');
+  const price=seen.reduce((a,b)=>a+(+b.price||0),0);
   const chars=done.reduce((a,b)=>a+estChars(b.chars,b.volumes),0);
   const vols=done.reduce((a,b)=>a+(+b.volumes||0),0);
   const box=$('#sum');
@@ -338,7 +340,7 @@ function renderStats(){
   }
   box.querySelectorAll('.st').forEach(e=>e.classList.toggle('on',e.dataset.m===sumMode));
   const sy=$('#sumyear'); sy.hidden=sumMode!=='year'; fillYears(sy,years);
-  const cells=[['읽은 책',done.length,'작품'],['읽은 권수',vols,'권'],['책값',price,'원'],['읽은 글자 수',Math.round(chars*10000),'자']];
+  const cells=[['읽은 책',seen.length,'작품'],['읽은 권수',vols,'권'],['책값',price,'원'],['읽은 글자 수',Math.round(chars*10000),'자']];
   // 새로고침 직후나 전체/연간·연도가 바뀔 때만 0에서 올라가게 하고, 책을 고치거나 지울 때는 바로 값만 바꾼다
   const key=sumMode+(sumMode==='year'?towerYear:'');
   const animate=key!==sumKey&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
