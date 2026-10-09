@@ -15,7 +15,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
-.wrap{max-width:900px;margin:0 auto;padding:24px 16px 80px}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 h1{font-size:22px;margin:0}
 h1 small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
@@ -79,7 +79,7 @@ a{color:var(--accent)}
 .tw{background:var(--card);border-radius:12px;padding:16px;margin-bottom:20px;box-shadow:var(--shadow)}
 .tw-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .tw-head select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
-.tw-body{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:24px;margin-top:12px}
+.tw-body{display:grid;grid-template-columns:280px 1fr;gap:28px;margin-top:12px}
 .tower{display:flex;flex-direction:column-reverse;align-items:center;width:100%;padding:8px 0 0}
 .tower .floor{width:100%;height:8px;min-height:8px;background:var(--line);border-radius:4px;flex:none}
 .tower .bk{flex:none;width:90%;border-radius:8px;margin:0;line-height:1;color:#2b2b33;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -96,14 +96,35 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
 .hovg{width:fit-content;transform-origin:left center}
 .hovg:hover{transform:scale(1.15)}
 .hovg.graph{width:100%;transform-origin:center;margin-top:15px;padding-top:16px}
-.hovg.graph:hover{transform:scale(1.08)}
+.hovg.graph:hover{transform:scale(1.04)}
 @media (prefers-reduced-motion:reduce){.rd,.hovg{transition:none}}
 .rd-num{font-size:24px;font-weight:700;line-height:1.3}
 .rd-msg{font-size:14px;margin-top:2px}
 .tw-info b{font-size:20px}
 .months{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:90px}
-.months div{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative;opacity:.85}
-.months div span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+.mcol{height:100%;display:flex;align-items:flex-end;cursor:pointer}
+.mbar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative;opacity:.85}
+.mbar span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+.mcol:hover .mbar{opacity:1}
+.mcol.sel .mbar{background:#0a6fc9;opacity:1}
+.mlab span{cursor:pointer}
+.mlab span.sel{color:var(--accent);font-weight:700}
+/* 월별 캘린더 */
+.cal{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.cal-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cal-head .btn{margin-left:auto}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid .wd{text-align:center;font-size:12px;color:var(--muted);padding:2px 0}
+.cd{min-height:96px;border:1px solid var(--line);border-radius:6px;padding:4px;min-width:0}
+.cd.empty{border:0}
+.cd .dn{font-size:11px;color:var(--muted)}
+.cd.has .dn{color:var(--text);font-weight:700}
+.cv{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;margin-top:3px}
+.cc{position:relative;display:block;aspect-ratio:2/3;background:var(--line);border-radius:4px;overflow:hidden;width:58%;text-decoration:none}
+.cv.n2 .cc,.cv.n3 .cc,.cv.n4 .cc{width:calc(50% - 2px)}
+.cc .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:3px;text-align:center;font-size:9px;line-height:1.2;color:var(--muted);word-break:keep-all}
+.cc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cc:hover{outline:2px solid var(--accent)}
 .mlab{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center}
 @media (max-width:600px){.tw-body{grid-template-columns:1fr}}
 @media (max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.book{grid-template-columns:1fr}}
@@ -299,7 +320,7 @@ function renderStats(){
   if(!box.firstChild){
     box.innerHTML=`<div class="sum-tabs"><button class="st" data-m="all">전체</button><button class="st" data-m="year">연간</button><select id="sumyear" hidden></select></div><div class="sum-row"></div>`;
     box.querySelectorAll('.st').forEach(e=>e.onclick=()=>{sumMode=e.dataset.m;renderStats()});
-    $('#sumyear').onchange=e=>{towerYear=+e.target.value;render()};
+    $('#sumyear').onchange=e=>{towerYear=+e.target.value;calMonth=null;render()};
   }
   box.querySelectorAll('.st').forEach(e=>e.classList.toggle('on',e.dataset.m===sumMode));
   const sy=$('#sumyear'); sy.hidden=sumMode!=='year'; fillYears(sy,years);
@@ -386,7 +407,20 @@ function bookHeight(chars,vol){
   const m=estChars(chars,vol);
   return Math.min(110,Math.max(14,Math.round(12+m*0.4)));
 }
-let towerYear=new Date().getFullYear();
+let towerYear=new Date().getFullYear(), calMonth=null;
+// 선택한 달의 완독 작품을 날짜별 캘린더로 보여 준다 (대표 이미지, 누르면 리디북스 책 페이지)
+function calHTML(yr,mo){
+  const days=new Date(yr,mo,0).getDate(), first=new Date(yr,mo-1,1).getDay(), pre=yr+'-'+String(mo).padStart(2,'0');
+  const byDay={}; let total=0;
+  books.filter(b=>b.status==='done'&&(b.end||'').startsWith(pre)).forEach(b=>{const d=+b.end.slice(8,10); (byDay[d]=byDay[d]||[]).push(b); total++});
+  let cells='<div class="wd">일</div><div class="wd">월</div><div class="wd">화</div><div class="wd">수</div><div class="wd">목</div><div class="wd">금</div><div class="wd">토</div>';
+  for(let i=0;i<first;i++) cells+='<div class="cd empty"></div>';
+  for(let d=1;d<=days;d++){
+    const l=byDay[d]||[];
+    cells+=`<div class="cd ${l.length?'has':''}"><span class="dn">${d}</span><div class="cv n${Math.min(l.length,4)}">${l.map(b=>`<a class="cc" href="${ridiUrl(b)}" target="_blank" rel="noopener" title="${esc(b.title)}"><span class="ph">${esc(b.title)}</span>${b.ridi?`<img src="https://img.ridicdn.net/cover/${encodeURIComponent(b.ridi)}/large" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</a>`).join('')}</div></div>`;
+  }
+  return `<div class="cal"><div class="cal-head"><b>${yr}년 ${mo}월</b><span class="meta">완독 ${total}권</span><button class="btn ghost sm" id="calclose">닫기</button></div><div class="cal-grid">${cells}</div></div>`;
+}
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
 function towerItems(yr){
   const out=[];
@@ -426,7 +460,7 @@ function renderTower(){
   const tw=$('#tw');
   if(!tw.firstChild){
     tw.innerHTML=`<div class="tw-head"><b id="twtitle"></b><select id="twyear"></select></div><div id="twbody"></div>`;
-    $('#twyear').onchange=e=>{towerYear=+e.target.value;renderStats();renderTower()};
+    $('#twyear').onchange=e=>{towerYear=+e.target.value;calMonth=null;renderStats();renderTower()};
   }
   $('#twtitle').textContent=`${towerYear}년 책탑`; fillYears($('#twyear'),years);
   $('#twbody').innerHTML=`
@@ -438,11 +472,17 @@ function renderTower(){
           <div class="meta">월별 완독 권수</div>
         </div>
         <div class="hovg graph">
-          <div class="months">${mc.map(n=>`<div style="height:${Math.round(n/mx*100)}%"><span>${n||''}</span></div>`).join('')}</div>
-          <div class="mlab">${mc.map((_,i)=>`<span>${i+1}</span>`).join('')}</div>
+          <div class="months">${mc.map((n,i)=>`<div class="mcol ${calMonth===i+1?'sel':''}" data-m="${i+1}" title="${i+1}월 ${n}권 · 누르면 캘린더로 보기"><div class="mbar" style="height:${Math.round(n/mx*100)}%"><span>${n||''}</span></div></div>`).join('')}</div>
+          <div class="mlab">${mc.map((_,i)=>`<span class="${calMonth===i+1?'sel':''}" data-m="${i+1}">${i+1}</span>`).join('')}</div>
         </div>
+        ${calMonth?calHTML(towerYear,calMonth):''}
       </div>
     </div>`;
+  document.querySelectorAll('#twbody [data-m]').forEach(e=>e.onclick=()=>{
+    calMonth=calMonth===+e.dataset.m?null:+e.dataset.m; renderTower();
+    const c=document.querySelector('.cal'); if(c) c.scrollIntoView({block:'nearest',behavior:'smooth'});
+  });
+  const cc=$('#calclose'); if(cc) cc.onclick=()=>{calMonth=null;renderTower()};
   // 높이는 규칙대로 고정하고, 제목이 한 줄에 다 들어가도록 글자 크기를 책 높이·너비에 맞춘다
   document.querySelectorAll('.tower a.bk').forEach(a=>{
     let fs=Math.max(8,Math.min(13,(+a.dataset.h)-4)); a.style.fontSize=fs+'px';
