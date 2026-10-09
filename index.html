@@ -74,7 +74,8 @@ form{padding:20px;display:grid;gap:12px}
 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 label input,label select,label textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--text)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:4px}
+.foot .btn{white-space:nowrap}
 a{color:var(--accent)}
 .tw{background:var(--card);border-radius:12px;padding:16px;margin-bottom:20px;box-shadow:var(--shadow)}
 .tw-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -125,6 +126,9 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
 .cc .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:3px;text-align:center;font-size:9px;line-height:1.2;color:var(--muted);word-break:keep-all}
 .cc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cc:hover{outline:2px solid var(--accent)}
+.imgprev{position:relative;width:120px;aspect-ratio:2/3;background:var(--line);border-radius:6px;overflow:hidden;margin:0 auto;display:flex;align-items:center;justify-content:center}
+.imgprev span{padding:6px;text-align:center;font-size:12px;color:var(--muted)}
+.imgprev img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .mlab{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center}
 @media (max-width:600px){.tw-body{grid-template-columns:1fr}}
 @media (max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.book{grid-template-columns:1fr}}
@@ -185,6 +189,16 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
   </div>
 </div>
 
+<dialog id="imgdlg">
+  <form method="dialog" id="imgform">
+    <div id="imgtitle" style="font-weight:700"></div>
+    <div class="imgprev"><span id="imgph"></span><img id="imgprev" alt="" referrerpolicy="no-referrer" onload="this.style.display=''" onerror="this.style.display='none'"></div>
+    <label>이미지 주소 · 리디북스 링크 · 책 번호<input id="imgin" placeholder="https://… 또는 https://ridibooks.com/books/…"></label>
+    <div class="meta">이 날짜에만 적용돼요. 비우고 저장하면 기본 이미지로 돌아가요.</div>
+    <div class="foot"><a class="btn ghost" id="imgopen" target="_blank" rel="noopener" style="text-decoration:none;margin-right:auto">작품 페이지 열기</a>
+      <button type="button" class="btn ghost" id="imgcancel">취소</button><button type="submit" class="btn">저장</button></div>
+  </form>
+</dialog>
 <dialog id="dlg">
   <form method="dialog" id="form">
     <label>리디북스 링크 또는 책 번호 (선택)<input name="ridi" placeholder="https://ridibooks.com/books/120040877"></label>
@@ -202,10 +216,6 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
     <div class="row">
       <label>시작일<input type="date" name="start"></label>
       <label>완독일<input type="date" name="end"></label>
-    </div>
-    <div class="row">
-      <label>시작일에 보일 이미지<input name="cvStart" placeholder="이미지 주소 또는 리디북스 링크 (비우면 기본)"></label>
-      <label>완독일에 보일 이미지<input name="cvEnd" placeholder="이미지 주소 또는 리디북스 링크 (비우면 기본)"></label>
     </div>
     <label>책값 (원)<input type="number" name="price" min="0" step="1" placeholder="예: 10100"></label>
     <div class="row">
@@ -248,9 +258,9 @@ const SB_KEY='sb_publishable_fceSxguB_2MhelFvS470bQ_Uez77JRa';
 const cloud=!SB_KEY.startsWith('PASTE');
 const sb=cloud?supabase.createClient(SB_URL,SB_KEY):null;
 const toRow=d=>({title:d.title,author:d.author||null,status:d.status,start_date:d.start||null,
-  end_date:d.end||null,progress:d.progress||0,ridi:d.ridi||null,cover_start:d.cvStart||null,cover_end:d.cvEnd||null,price:d.price||0,chars:d.chars||0,volumes:d.volumes||0,rating:d.rating||0,memo:d.memo||null});
+  end_date:d.end||null,progress:d.progress||0,ridi:d.ridi||null,cover_days:(d.cvDays&&Object.keys(d.cvDays).length)?d.cvDays:null,price:d.price||0,chars:d.chars||0,volumes:d.volumes||0,rating:d.rating||0,memo:d.memo||null});
 const fromRow=r=>({id:r.id,title:r.title,author:r.author||'',status:r.status,start:r.start_date||'',
-  end:r.end_date||'',progress:r.progress,ridi:r.ridi||'',cvStart:r.cover_start||'',cvEnd:r.cover_end||'',price:r.price||0,chars:+r.chars||0,volumes:r.volumes||0,rating:r.rating,memo:r.memo||''});
+  end:r.end_date||'',progress:r.progress,ridi:r.ridi||'',cvDays:r.cover_days||{},price:r.price||0,chars:+r.chars||0,volumes:r.volumes||0,rating:r.rating,memo:r.memo||''});
 
 async function loadBooks(){
   if(!cloud){
@@ -373,7 +383,7 @@ function renderList(){
   $('#list').className=view==='album'?'album':'list';
   if(view==='album'){
     $('#list').innerHTML=l.map(b=>`<a class="alb" href="${ridiUrl(b)}" target="_blank" rel="noopener">
-      <div class="cover"><span class="ph">${esc(b.title)}</span>${b.cvEnd||b.ridi?`<img src="${esc(b.cvEnd||('https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/xxlarge'))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
+      <div class="cover"><span class="ph">${esc(b.title)}</span>${(b.cvDays&&b.cvDays[b.end])||b.ridi?`<img src="${esc((b.cvDays&&b.cvDays[b.end])||('https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/xxlarge'))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
       <div class="at">${esc(b.title)}</div>
       ${b.author?`<div class="aa">${esc(b.author)}</div>`:''}
       ${b.rating?`<div class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</div>`:''}
@@ -420,23 +430,43 @@ function coverUrl(v){
   if(m) return 'https://img.ridicdn.net/cover/'+m[1]+'/xxlarge';
   return /^https?:\/\//i.test(v)?v:'';
 }
+// 시작일~완독일의 모든 날짜(YYYY-MM-DD). 시작일이 없거나 완독일보다 늦으면 완독일 하루
+function spanDays(b){
+  const e=b.end, s0=(b.start&&b.start<e)?b.start:e, out=[];
+  const u=x=>Date.UTC(+x.slice(0,4),+x.slice(5,7)-1,+x.slice(8,10));
+  for(let t=u(s0),te=u(e);t<=te&&out.length<400;t+=86400000){const d=new Date(t); out.push(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'))}
+  return out;
+}
+// 캘린더의 이미지를 누르면 열리는 '날짜별 이미지 바꾸기' 팝업
+let imgCtx=null;
+const defaultCover=(b,size)=>b.ridi?'https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/'+size:'';
+function updPrev(){
+  const b=books.find(x=>x.id===imgCtx.id); if(!b) return;
+  const src=coverUrl($('#imgin').value)||defaultCover(b,'xxlarge'), im=$('#imgprev');
+  $('#imgph').textContent=b.title; im.style.display=src?'':'none'; if(src) im.src=src;
+}
+function openImgDlg(id,date){
+  const b=books.find(x=>x.id===id); if(!b) return; imgCtx={id,date};
+  $('#imgtitle').textContent=b.title+' · '+date;
+  $('#imgin').value=(b.cvDays&&b.cvDays[date])||'';
+  $('#imgopen').href=ridiUrl(b); updPrev(); $('#imgdlg').showModal();
+}
 function calHTML(yr,mo){
   const days=new Date(yr,mo,0).getDate(), first=new Date(yr,mo-1,1).getDay(), pre=yr+'-'+String(mo).padStart(2,'0');
   const byDay={}; let total=0;
-  // 완독한 날에는 늘 표시하고, 시작한 날이 완독한 날과 다르면 시작한 날에도 같은 이미지를 표시한다 (시작한 날이 다른 달이면 그 달 캘린더에 표시)
-  const put=(d,b,k)=>{(byDay[d]=byDay[d]||[]).push({b,k})};
-  books.filter(b=>b.status==='done').forEach(b=>{
-    if((b.end||'').startsWith(pre)){put(+b.end.slice(8,10),b,'end'); total++}
-    if(b.start&&b.start!==b.end&&b.start.startsWith(pre)) put(+b.start.slice(8,10),b,'start');
+  // 읽은 기간(시작일~완독일) 동안 매일 표시한다. 시작일이 없거나 완독일보다 늦으면 완독일 하루만 표시한다
+  books.filter(b=>b.status==='done'&&b.end).forEach(b=>{
+    if(b.end.startsWith(pre)) total++;
+    for(const date of spanDays(b)) if(date.startsWith(pre)){const d=+date.slice(8,10); (byDay[d]=byDay[d]||[]).push({b,date})}
   });
   let cells='<div class="wd">일</div><div class="wd">월</div><div class="wd">화</div><div class="wd">수</div><div class="wd">목</div><div class="wd">금</div><div class="wd">토</div>';
   for(let i=0;i<first;i++) cells+='<div class="cd empty"></div>';
   for(let d=1;d<=days;d++){
     const l=byDay[d]||[];
-    cells+=`<div class="cd ${l.length?'has':''}"><span class="dn">${d}</span><div class="cv n${Math.min(l.length,4)}">${l.map(({b,k})=>{
+    cells+=`<div class="cd ${l.length?'has':''}"><span class="dn">${d}</span><div class="cv n${Math.min(l.length,4)}">${l.map(({b,date})=>{
       // 시작일/완독일에 직접 지정한 이미지가 있으면 그것을, 없으면 리디북스 기본 대표 이미지를 쓴다
-      const own=k==='start'?b.cvStart:b.cvEnd, src=own||(b.ridi?'https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/large':'');
-      return `<a class="cc" href="${ridiUrl(b)}" target="_blank" rel="noopener" title="${esc(b.title)}"><span class="ph">${esc(b.title)}</span>${src?`<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</a>`}).join('')}</div></div>`;
+      const own=(b.cvDays||{})[date], src=own||(b.ridi?'https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/large':'');
+      return `<a class="cc" href="#" data-b="${b.id}" data-d="${date}" title="${esc(b.title)} · 누르면 이미지 바꾸기"><span class="ph">${esc(b.title)}</span>${src?`<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</a>`}).join('')}</div></div>`;
   }
   return `<div class="cal"><div class="cal-head"><b>${yr}년 ${mo}월</b><span class="meta">완독 ${total}작품</span><button class="btn ghost sm" id="calclose">닫기</button></div><div class="cal-grid">${cells}</div></div>`;
 }
@@ -502,6 +532,7 @@ function renderTower(){
     const c=document.querySelector('.cal'); if(c) c.scrollIntoView({block:'nearest',behavior:'smooth'});
   });
   const cc=$('#calclose'); if(cc) cc.onclick=()=>{calMonth=null;renderTower()};
+  document.querySelectorAll('.cal .cc').forEach(a=>a.onclick=e=>{e.preventDefault();openImgDlg(+a.dataset.b,a.dataset.d)});
   // 높이는 규칙대로 고정하고, 제목이 한 줄에 다 들어가도록 글자 크기를 책 높이·너비에 맞춘다
   document.querySelectorAll('.tower a.bk').forEach(a=>{
     let fs=Math.max(8,Math.min(13,(+a.dataset.h)-4)); a.style.fontSize=fs+'px';
@@ -515,7 +546,7 @@ function openForm(id){
   const f=$('#form'); f.reset();
   if(id){
     const b=books.find(x=>x.id===id);
-    for(const k of ['title','author','status','start','end','progress','ridi','cvStart','cvEnd','price','chars','volumes','rating','memo']) f.elements[k].value=b[k]??'';
+    for(const k of ['title','author','status','start','end','progress','ridi','price','chars','volumes','rating','memo']) f.elements[k].value=b[k]??'';
     if(!f.elements.start.value&&f.elements.end.value) f.elements.start.value=f.elements.end.value; // 시작일 = 읽은 날
   }
   $('#dlg').showModal();
@@ -524,7 +555,7 @@ $('#add').onclick=()=>openForm();
 $('#cancel').onclick=()=>$('#dlg').close();
 $('#form').onsubmit=async()=>{
   const d=Object.fromEntries(new FormData($('#form')));
-  d.cvStart=coverUrl(d.cvStart); d.cvEnd=coverUrl(d.cvEnd);
+  d.cvDays=editId?((books.find(x=>x.id===editId)||{}).cvDays||{}):{};   // 날짜별 이미지는 수정창에서 지워지지 않게 그대로 보존
   d.ridi=(String(d.ridi||'').match(/books\/(\d+)/)||String(d.ridi||'').match(/^\s*(\d+)\s*$/)||[,''])[1];
   d.rating=+d.rating; d.price=Math.max(0,parseInt(d.price)||0); d.chars=Math.max(0,+d.chars||0); d.volumes=Math.max(0,parseInt(d.volumes)||0); d.progress=Math.max(0,Math.min(100,+d.progress||0));
   if(d.status==='done'){d.progress=100; if(!d.end) d.end=new Date().toISOString().slice(0,10)}
@@ -532,6 +563,13 @@ $('#form').onsubmit=async()=>{
   await saveBook(d,editId);render();
 };
 try{const v=localStorage.getItem('ebook-view'); if(v==='album'||v==='list') $('#view').value=v}catch{}
+$('#imgin').oninput=()=>imgCtx&&updPrev(); $('#imgcancel').onclick=()=>$('#imgdlg').close();
+$('#imgform').onsubmit=async()=>{
+  const b=books.find(x=>x.id===imgCtx.id); if(!b) return;
+  const url=coverUrl($('#imgin').value), m={...(b.cvDays||{})};
+  if(url) m[imgCtx.date]=url; else delete m[imgCtx.date];
+  await saveBook({...b,cvDays:m},b.id); renderTower();
+};
 $('#q').oninput=renderList; $('#sort').onchange=renderList; $('#rate').onchange=renderList;
 $('#view').onchange=()=>{try{localStorage.setItem('ebook-view',$('#view').value)}catch{}renderList()};
 
