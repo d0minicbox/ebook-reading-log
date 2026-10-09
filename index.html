@@ -51,6 +51,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .list{display:grid;gap:10px}
 .book{background:var(--card);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);display:grid;grid-template-columns:1fr auto;gap:6px 12px}
 .book h3{margin:0;font-size:16px}
+.book h3 .meta{font-weight:400;font-size:13px;margin-left:10px}
 .meta{color:var(--muted);font-size:13px}
 .tag{display:inline-block;font-size:12px;border-radius:10px;padding:1px 9px;color:#fff;margin-right:6px}
 .tag.dropped{background:var(--danger)}.tag.reading{background:var(--warn)}.tag.done{background:var(--good)}.tag.wish{background:var(--muted)}
@@ -147,7 +148,6 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
           <option value="reading">읽는 중</option>
           <option value="done">완독</option>
           <option value="dropped">하차</option>
-          <option value="wish">읽고 싶은 책</option>
         </select>
       </label>
     </div>
@@ -155,9 +155,9 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
       <label>시작일<input type="date" name="start"></label>
       <label>완독일<input type="date" name="end"></label>
     </div>
-    <label>책값 (원)<input type="number" name="price" min="0" step="100" placeholder="예: 10100"></label>
+    <label>책값 (원)<input type="number" name="price" min="0" step="1" placeholder="예: 10100"></label>
     <div class="row">
-      <label>글자 수 (만자) · 책탑 높이<input type="number" name="chars" min="0" max="5000" step="0.1" placeholder="예: 42.5"></label>
+      <label>글자 수 (만자) · 책탑 높이<input type="number" name="chars" min="0" max="5000" step="any" placeholder="예: 42.5"></label>
       <label>권수<input type="number" name="volumes" min="0" max="500" placeholder="예: 3"></label>
     </div>
     <div class="row">
@@ -283,7 +283,7 @@ function renderStats(){
 }
 
 function renderTabs(){
-  const t=[['all','전체'],['reading','읽는 중'],['done','완독'],['dropped','하차'],['wish','읽고 싶은 책']];
+  const t=[['all','전체'],['reading','읽는 중'],['done','완독'],['dropped','하차']];
   $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab ${tab===k?'on':''}" data-k="${k}">${l}</button>`).join('');
   document.querySelectorAll('.tab').forEach(e=>e.onclick=()=>{tab=e.dataset.k;render()});
 }
@@ -301,12 +301,9 @@ function renderList(){
   l.sort(cmp);
   if(!l.length){$('#list').innerHTML='<div class="empty">기록된 책이 없어요. “+ 책 추가”로 시작해 보세요.</div>';return}
   $('#list').innerHTML=l.map(b=>{
-    const dates=[b.start&&`시작 ${b.start}`,b.end&&`완독 ${b.end}`].filter(Boolean).join(' · ');
     return `<article class="book">
       <div>
-        <h3><span class="tag ${b.status}">${LABEL[b.status]}</span><a class="ttl" href="${ridiUrl(b)}" target="_blank" rel="noopener">${esc(b.title)}</a></h3>
-        <div class="meta">${esc(b.author||'저자 미상')}${b.chars?' · '+b.chars+'만자':''}${b.volumes?' · '+b.volumes+'권':''}${dates?' · '+dates:''}
-          ${b.rating?` · <span class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</span>`:''}</div>
+        <h3><span class="tag ${b.status}">${LABEL[b.status]}</span><a class="ttl" href="${ridiUrl(b)}" target="_blank" rel="noopener">${esc(b.title)}</a>${b.author?`<span class="meta">${esc(b.author)}</span>`:''}${b.rating?`<span class="meta"><span class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</span></span>`:''}</h3>
         ${b.status==='reading'?`<div class="bar"><i style="width:${b.progress||0}%"></i></div><div class="meta">${b.progress||0}% 읽음</div>`:''}
       </div>
       <div class="acts">
@@ -401,6 +398,7 @@ function openForm(id){
   if(id){
     const b=books.find(x=>x.id===id);
     for(const k of ['title','author','status','start','end','progress','ridi','price','chars','volumes','rating','memo']) f.elements[k].value=b[k]??'';
+    if(!f.elements.start.value&&f.elements.end.value) f.elements.start.value=f.elements.end.value; // 시작일 = 읽은 날
   }
   $('#dlg').showModal();
 }
@@ -411,6 +409,7 @@ $('#form').onsubmit=async()=>{
   d.ridi=(String(d.ridi||'').match(/books\/(\d+)/)||String(d.ridi||'').match(/^\s*(\d+)\s*$/)||[,''])[1];
   d.rating=+d.rating; d.price=Math.max(0,parseInt(d.price)||0); d.chars=Math.max(0,+d.chars||0); d.volumes=Math.max(0,parseInt(d.volumes)||0); d.progress=Math.max(0,Math.min(100,+d.progress||0));
   if(d.status==='done'){d.progress=100; if(!d.end) d.end=new Date().toISOString().slice(0,10)}
+  if(!d.start&&d.end) d.start=d.end;
   await saveBook(d,editId);render();
 };
 $('#q').oninput=renderList; $('#sort').onchange=renderList;
