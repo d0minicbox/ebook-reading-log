@@ -115,14 +115,14 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
 .cal{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
 .cal-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .cal-head .btn{margin-left:auto}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
 .cal-grid .wd{text-align:center;font-size:12px;color:var(--muted);padding:2px 0}
-.cd{min-height:64px;padding:2px;min-width:0}
+.cd{position:relative;aspect-ratio:69/112;padding:0;min-width:0}   /* 칸 크기(가로:세로)는 그대로 두고, 안의 이미지를 칸에 꽉 차게 */
 .cd .dn{font-size:11px;color:var(--muted)}
-.cd.has .dn{color:var(--text);font-weight:700}
-.cv{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;margin-top:2px}
-.cc{position:relative;display:block;aspect-ratio:2/3;background:var(--line);border-radius:4px;overflow:hidden;width:86%;text-decoration:none}
-.cv.n2 .cc,.cv.n3 .cc,.cv.n4 .cc{width:calc(50% - 1px)}
+.cd.has .dn{position:absolute;top:3px;left:3px;z-index:2;pointer-events:none;background:rgba(0,0,0,.55);color:#fff;border-radius:3px;padding:0 4px;font-size:10px;line-height:14px;font-weight:700}
+.cv{display:flex;flex-wrap:wrap;justify-content:center;gap:1px;margin-top:0}
+.cc{position:relative;display:block;aspect-ratio:2/3;background:var(--line);border-radius:4px;overflow:hidden;width:100%;text-decoration:none}
+.cv.n2 .cc,.cv.n3 .cc,.cv.n4 .cc{width:calc(50% - .5px)}
 .cc .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:3px;text-align:center;font-size:9px;line-height:1.2;color:var(--muted);word-break:keep-all}
 .cc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cc:hover{outline:2px solid var(--accent)}
