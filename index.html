@@ -56,6 +56,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tag{display:inline-block;font-size:12px;border-radius:10px;padding:1px 9px;color:#fff;margin-right:6px}
 .tag.dropped{background:var(--danger)}.tag.reading{background:var(--warn)}.tag.done{background:var(--good)}.tag.wish{background:var(--muted)}
 .stars{color:var(--warn);letter-spacing:1px}
+.album{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:18px 14px}
+.alb{display:block;text-decoration:none;color:inherit;min-width:0}
+.alb .cover{position:relative;aspect-ratio:2/3;background:var(--line);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.alb .cover .ph{padding:8px;text-align:center;font-size:12px;color:var(--muted);word-break:keep-all}
+.alb .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.alb .at{margin-top:8px;font-weight:700;font-size:14px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.alb .aa{color:var(--muted);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alb .stars{font-size:12px;margin-top:2px}
+.alb:hover .at{color:var(--accent)}
 .memo{grid-column:1/-1;white-space:pre-wrap;font-size:14px;border-left:3px solid var(--line);padding-left:10px}
 .acts{display:flex;gap:6px;align-items:flex-start}
 .empty{text-align:center;color:var(--muted);padding:48px 0}
@@ -78,6 +87,7 @@ a{color:var(--accent)}
 .tower a.bk:hover{opacity:.85}
 a.ttl{color:inherit;text-decoration:none}
 a.ttl:hover{color:var(--accent);text-decoration:underline}
+.tower a.bk.drop{text-decoration:line-through}
 .tower .bk.part{opacity:.65;border:2px dashed rgba(0,0,0,.35)}
 .rd{text-align:center;color:#1E9EFF;padding:8px 0 14px;width:100%}
 .rd-num{font-size:24px;font-weight:700;line-height:1.3}
@@ -127,10 +137,19 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
   <div class="tools">
     <input type="search" id="q" placeholder="제목·저자·메모 검색">
     <select id="sort">
-      <option value="added">최근 추가순</option>
-      <option value="end">완독일순</option>
-      <option value="rating">별점순</option>
-      <option value="title">제목순</option>
+      <option value="added">최근 추가</option>
+      <option value="end">완독일</option>
+      <option value="rating">별점</option>
+      <option value="title">제목</option>
+    </select>
+    <select id="rate" hidden aria-label="별점 선택">
+      <option value="all">전체 별점</option>
+      <option value="5">★ 5점</option><option value="4">★ 4점</option><option value="3">★ 3점</option>
+      <option value="2">★ 2점</option><option value="1">★ 1점</option>
+    </select>
+    <select id="view" aria-label="보기">
+      <option value="list">보기: 리스트형</option>
+      <option value="album">보기: 앨범형</option>
     </select>
   </div>
   <div class="list" id="list"></div>
@@ -283,14 +302,16 @@ function renderStats(){
 }
 
 function renderTabs(){
-  const t=[['all','전체'],['reading','읽는 중'],['done','완독'],['dropped','하차']];
+  const t=[['all','전체'],['done','완독'],['dropped','하차']];
   $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab ${tab===k?'on':''}" data-k="${k}">${l}</button>`).join('');
   document.querySelectorAll('.tab').forEach(e=>e.onclick=()=>{tab=e.dataset.k;render()});
 }
 
 function renderList(){
   const q=$('#q').value.trim().toLowerCase(), s=$('#sort').value;
-  let l=books.filter(b=>(tab==='all'||b.status===tab)&&
+  $('#rate').hidden=s!=='rating';
+  const rf=s==='rating'?$('#rate').value:'all';
+  let l=books.filter(b=>(tab==='all'||b.status===tab)&&(rf==='all'||b.rating===+rf)&&
     (!q||[b.title,b.author,b.memo].some(x=>(x||'').toLowerCase().includes(q))));
   const cmp={
     added:(a,b)=>b.id-a.id,
@@ -300,6 +321,17 @@ function renderList(){
   }[s];
   l.sort(cmp);
   if(!l.length){$('#list').innerHTML='<div class="empty">기록된 책이 없어요. “+ 책 추가”로 시작해 보세요.</div>';return}
+  const view=$('#view').value;
+  $('#list').className=view==='album'?'album':'list';
+  if(view==='album'){
+    $('#list').innerHTML=l.map(b=>`<a class="alb" href="${ridiUrl(b)}" target="_blank" rel="noopener">
+      <div class="cover"><span class="ph">${esc(b.title)}</span>${b.ridi?`<img src="https://img.ridicdn.net/cover/${encodeURIComponent(b.ridi)}/xxlarge" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
+      <div class="at">${esc(b.title)}</div>
+      ${b.author?`<div class="aa">${esc(b.author)}</div>`:''}
+      ${b.rating?`<div class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</div>`:''}
+    </a>`).join('');
+    return;
+  }
   $('#list').innerHTML=l.map(b=>{
     return `<article class="book">
       <div>
@@ -338,6 +370,7 @@ function towerItems(yr){
   for(const b of books){
     const pg=estChars(b.chars,b.volumes);
     if(b.status==='done'&&(b.end||'').startsWith(yr)) out.push({b,pages:pg,part:false,at:b.end});
+    else if(b.status==='dropped'&&(b.end||'').startsWith(yr)) out.push({b,pages:pg,part:false,drop:true,at:b.end});
     else if(b.status==='reading'&&estChars(b.chars,b.volumes)>0&&(b.start?b.start.startsWith(yr):yr===new Date().getFullYear())){
       const read=Math.round(estChars(b.chars,b.volumes)*(b.progress||0))/100;
       if(read>0) out.push({b,pages:read,part:true,at:b.start||''});
@@ -352,11 +385,11 @@ function renderTower(){
   const years=[...ys].sort((a,b)=>b-a);
   if(!ys.has(towerYear)) towerYear=now;
   const items=towerItems(String(towerYear));
-  const total=items.reduce((a,i)=>a+i.pages,0);
+  const total=items.filter(i=>!i.drop).reduce((a,i)=>a+i.pages,0);
   const tier=TIERS.find(t=>total>=t[0]);
-  const doneCount=items.filter(i=>!i.part).length;
+  const doneCount=items.filter(i=>!i.part&&!i.drop).length;
   const mc=Array(12).fill(0);
-  items.filter(i=>!i.part).forEach(i=>{const m=+(i.at||'').slice(5,7);if(m>=1&&m<=12) mc[m-1]++});
+  items.filter(i=>!i.part&&!i.drop).forEach(i=>{const m=+(i.at||'').slice(5,7);if(m>=1&&m<=12) mc[m-1]++});
   const mx=Math.max(1,...mc);
   let prevColor=-1;
   const stack=items.map((i,k)=>{
@@ -364,8 +397,8 @@ function renderTower(){
     const off=(hash(i.b.title+k)%33)-16; // 너비는 모두 같고, 좌우로 살짝 어긋나게 쌓는다 (±16px)
     let ci=hash(i.b.title)%COLORS.length; if(ci===prevColor) ci=(ci+1)%COLORS.length; prevColor=ci; // 바로 옆 책과 같은 색이 겹치지 않게
     const c=COLORS[ci];
-    return `<a class="bk ${i.part?'part':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" data-h="${h}" style="height:${h}px;background:${c};transform:translateX(${off}px)"
-      title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}">${esc(i.b.title)}</a>`;
+    return `<a class="bk ${i.part?'part':''} ${i.drop?'drop':''}" href="${ridiUrl(i.b)}" target="_blank" rel="noopener" data-h="${h}" style="height:${h}px;background:${c};transform:translateX(${off}px)"
+      title="${esc(i.b.title)} · ${Math.round(i.pages*10)/10}만자${i.part?' (읽는 중)':''}${i.drop?' (하차)':''}">${esc(i.b.title)}</a>`;
   }).join('');
   const tw=$('#tw');
   if(!tw.firstChild){
@@ -412,7 +445,9 @@ $('#form').onsubmit=async()=>{
   if(!d.start&&d.end) d.start=d.end;
   await saveBook(d,editId);render();
 };
-$('#q').oninput=renderList; $('#sort').onchange=renderList;
+try{const v=localStorage.getItem('ebook-view'); if(v==='album'||v==='list') $('#view').value=v}catch{}
+$('#q').oninput=renderList; $('#sort').onchange=renderList; $('#rate').onchange=renderList;
+$('#view').onchange=()=>{try{localStorage.setItem('ebook-view',$('#view').value)}catch{}renderList()};
 
 $('#export').onclick=()=>{
   const a=document.createElement('a');
