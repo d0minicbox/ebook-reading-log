@@ -203,6 +203,10 @@ a.ttl:hover{color:var(--accent);text-decoration:underline}
       <label>시작일<input type="date" name="start"></label>
       <label>완독일<input type="date" name="end"></label>
     </div>
+    <div class="row">
+      <label>시작일에 보일 이미지<input name="cvStart" placeholder="이미지 주소 또는 리디북스 링크 (비우면 기본)"></label>
+      <label>완독일에 보일 이미지<input name="cvEnd" placeholder="이미지 주소 또는 리디북스 링크 (비우면 기본)"></label>
+    </div>
     <label>책값 (원)<input type="number" name="price" min="0" step="1" placeholder="예: 10100"></label>
     <div class="row">
       <label>글자 수 (만자) · 책탑 높이<input type="number" name="chars" min="0" max="5000" step="any" placeholder="예: 42.5"></label>
@@ -244,9 +248,9 @@ const SB_KEY='sb_publishable_fceSxguB_2MhelFvS470bQ_Uez77JRa';
 const cloud=!SB_KEY.startsWith('PASTE');
 const sb=cloud?supabase.createClient(SB_URL,SB_KEY):null;
 const toRow=d=>({title:d.title,author:d.author||null,status:d.status,start_date:d.start||null,
-  end_date:d.end||null,progress:d.progress||0,ridi:d.ridi||null,price:d.price||0,chars:d.chars||0,volumes:d.volumes||0,rating:d.rating||0,memo:d.memo||null});
+  end_date:d.end||null,progress:d.progress||0,ridi:d.ridi||null,cover_start:d.cvStart||null,cover_end:d.cvEnd||null,price:d.price||0,chars:d.chars||0,volumes:d.volumes||0,rating:d.rating||0,memo:d.memo||null});
 const fromRow=r=>({id:r.id,title:r.title,author:r.author||'',status:r.status,start:r.start_date||'',
-  end:r.end_date||'',progress:r.progress,ridi:r.ridi||'',price:r.price||0,chars:+r.chars||0,volumes:r.volumes||0,rating:r.rating,memo:r.memo||''});
+  end:r.end_date||'',progress:r.progress,ridi:r.ridi||'',cvStart:r.cover_start||'',cvEnd:r.cover_end||'',price:r.price||0,chars:+r.chars||0,volumes:r.volumes||0,rating:r.rating,memo:r.memo||''});
 
 async function loadBooks(){
   if(!cloud){
@@ -369,7 +373,7 @@ function renderList(){
   $('#list').className=view==='album'?'album':'list';
   if(view==='album'){
     $('#list').innerHTML=l.map(b=>`<a class="alb" href="${ridiUrl(b)}" target="_blank" rel="noopener">
-      <div class="cover"><span class="ph">${esc(b.title)}</span>${b.ridi?`<img src="https://img.ridicdn.net/cover/${encodeURIComponent(b.ridi)}/xxlarge" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
+      <div class="cover"><span class="ph">${esc(b.title)}</span>${b.cvEnd||b.ridi?`<img src="${esc(b.cvEnd||('https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/xxlarge'))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
       <div class="at">${esc(b.title)}</div>
       ${b.author?`<div class="aa">${esc(b.author)}</div>`:''}
       ${b.rating?`<div class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</div>`:''}
@@ -409,20 +413,30 @@ function bookHeight(chars,vol){
 }
 let towerYear=new Date().getFullYear(), calMonth=null;
 // 선택한 달의 완독 작품을 날짜별 캘린더로 보여 준다 (대표 이미지, 누르면 리디북스 책 페이지)
+// 이미지 칸에는 이미지 주소, 리디북스 책 링크, 리디북스 책 번호 중 아무거나 붙여 넣을 수 있다
+function coverUrl(v){
+  v=String(v||'').trim(); if(!v) return '';
+  const m=v.match(/ridibooks\.com\/books\/(\d+)/)||v.match(/^(\d{5,})$/);
+  if(m) return 'https://img.ridicdn.net/cover/'+m[1]+'/xxlarge';
+  return /^https?:\/\//i.test(v)?v:'';
+}
 function calHTML(yr,mo){
   const days=new Date(yr,mo,0).getDate(), first=new Date(yr,mo-1,1).getDay(), pre=yr+'-'+String(mo).padStart(2,'0');
   const byDay={}; let total=0;
   // 완독한 날에는 늘 표시하고, 시작한 날이 완독한 날과 다르면 시작한 날에도 같은 이미지를 표시한다 (시작한 날이 다른 달이면 그 달 캘린더에 표시)
-  const put=(d,b)=>{(byDay[d]=byDay[d]||[]).push(b)};
+  const put=(d,b,k)=>{(byDay[d]=byDay[d]||[]).push({b,k})};
   books.filter(b=>b.status==='done').forEach(b=>{
-    if((b.end||'').startsWith(pre)){put(+b.end.slice(8,10),b); total++}
-    if(b.start&&b.start!==b.end&&b.start.startsWith(pre)) put(+b.start.slice(8,10),b);
+    if((b.end||'').startsWith(pre)){put(+b.end.slice(8,10),b,'end'); total++}
+    if(b.start&&b.start!==b.end&&b.start.startsWith(pre)) put(+b.start.slice(8,10),b,'start');
   });
   let cells='<div class="wd">일</div><div class="wd">월</div><div class="wd">화</div><div class="wd">수</div><div class="wd">목</div><div class="wd">금</div><div class="wd">토</div>';
   for(let i=0;i<first;i++) cells+='<div class="cd empty"></div>';
   for(let d=1;d<=days;d++){
     const l=byDay[d]||[];
-    cells+=`<div class="cd ${l.length?'has':''}"><span class="dn">${d}</span><div class="cv n${Math.min(l.length,4)}">${l.map(b=>`<a class="cc" href="${ridiUrl(b)}" target="_blank" rel="noopener" title="${esc(b.title)}"><span class="ph">${esc(b.title)}</span>${b.ridi?`<img src="https://img.ridicdn.net/cover/${encodeURIComponent(b.ridi)}/large" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</a>`).join('')}</div></div>`;
+    cells+=`<div class="cd ${l.length?'has':''}"><span class="dn">${d}</span><div class="cv n${Math.min(l.length,4)}">${l.map(({b,k})=>{
+      // 시작일/완독일에 직접 지정한 이미지가 있으면 그것을, 없으면 리디북스 기본 대표 이미지를 쓴다
+      const own=k==='start'?b.cvStart:b.cvEnd, src=own||(b.ridi?'https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/large':'');
+      return `<a class="cc" href="${ridiUrl(b)}" target="_blank" rel="noopener" title="${esc(b.title)}"><span class="ph">${esc(b.title)}</span>${src?`<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</a>`}).join('')}</div></div>`;
   }
   return `<div class="cal"><div class="cal-head"><b>${yr}년 ${mo}월</b><span class="meta">완독 ${total}작품</span><button class="btn ghost sm" id="calclose">닫기</button></div><div class="cal-grid">${cells}</div></div>`;
 }
@@ -501,7 +515,7 @@ function openForm(id){
   const f=$('#form'); f.reset();
   if(id){
     const b=books.find(x=>x.id===id);
-    for(const k of ['title','author','status','start','end','progress','ridi','price','chars','volumes','rating','memo']) f.elements[k].value=b[k]??'';
+    for(const k of ['title','author','status','start','end','progress','ridi','cvStart','cvEnd','price','chars','volumes','rating','memo']) f.elements[k].value=b[k]??'';
     if(!f.elements.start.value&&f.elements.end.value) f.elements.start.value=f.elements.end.value; // 시작일 = 읽은 날
   }
   $('#dlg').showModal();
@@ -510,6 +524,7 @@ $('#add').onclick=()=>openForm();
 $('#cancel').onclick=()=>$('#dlg').close();
 $('#form').onsubmit=async()=>{
   const d=Object.fromEntries(new FormData($('#form')));
+  d.cvStart=coverUrl(d.cvStart); d.cvEnd=coverUrl(d.cvEnd);
   d.ridi=(String(d.ridi||'').match(/books\/(\d+)/)||String(d.ridi||'').match(/^\s*(\d+)\s*$/)||[,''])[1];
   d.rating=+d.rating; d.price=Math.max(0,parseInt(d.price)||0); d.chars=Math.max(0,+d.chars||0); d.volumes=Math.max(0,parseInt(d.volumes)||0); d.progress=Math.max(0,Math.min(100,+d.progress||0));
   if(d.status==='done'){d.progress=100; if(!d.end) d.end=new Date().toISOString().slice(0,10)}
