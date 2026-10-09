@@ -37,7 +37,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sum-row div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:0 4px;min-width:0}
 .sum-row div+div{border-left:1px solid var(--line)}
 .sum-row span{color:var(--muted);font-size:13px}
-.sum-row b{font-size:clamp(14px,3.9vw,20px);white-space:nowrap}
+.sum-row b{font-size:clamp(14px,3.9vw,20px);white-space:nowrap;font-variant-numeric:tabular-nums}
 @media (max-width:520px){.sum-row{grid-template-columns:repeat(2,1fr);gap:14px 0}.sum-row div:nth-child(odd){border-left:0}.sum-row div:nth-child(n+3){border-top:1px solid var(--line);padding-top:14px}}
 .goal{background:var(--card);border-radius:12px;padding:14px;margin-bottom:20px;box-shadow:var(--shadow)}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
@@ -89,11 +89,17 @@ a.ttl{color:inherit;text-decoration:none}
 a.ttl:hover{color:var(--accent);text-decoration:underline}
 .tower a.bk.drop{text-decoration:line-through}
 .tower .bk.part{opacity:.65;border:2px dashed rgba(0,0,0,.35)}
-.rd{text-align:center;color:#1E9EFF;padding:8px 0 14px;width:100%}
+.rd{text-align:center;color:#1E9EFF;padding:8px 0 29px;width:100%}
+.rd,.hov{transition:transform .18s ease;cursor:default}
+.rd{transform-origin:center bottom}
+.rd:hover{transform:scale(1.07)}
+.hov{width:fit-content;transform-origin:left center}
+.hov:hover{transform:scale(1.15)}
+@media (prefers-reduced-motion:reduce){.rd,.hov{transition:none}}
 .rd-num{font-size:24px;font-weight:700;line-height:1.3}
 .rd-msg{font-size:14px;margin-top:2px}
 .tw-info b{font-size:20px}
-.months{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:90px;margin-top:6px}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:90px;margin-top:31px}
 .months div{background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative;opacity:.85}
 .months div span{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
 .mlab{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center}
@@ -280,6 +286,7 @@ function fillYears(sel,years){
   if(sel.dataset.ys!==key){sel.innerHTML=years.map(y=>`<option>${y}</option>`).join('');sel.dataset.ys=key}
   sel.value=String(towerYear);
 }
+let sumKey=null,sumRaf=0,sumTimer=0;
 function renderStats(){
   const years=yearsOf(); if(!years.includes(towerYear)) towerYear=new Date().getFullYear();
   const done=books.filter(b=>b.status==='done'&&(sumMode==='all'||(b.end||'').startsWith(String(towerYear))));
@@ -294,11 +301,25 @@ function renderStats(){
   }
   box.querySelectorAll('.st').forEach(e=>e.classList.toggle('on',e.dataset.m===sumMode));
   const sy=$('#sumyear'); sy.hidden=sumMode!=='year'; fillYears(sy,years);
-  box.querySelector('.sum-row').innerHTML=`
-      <div><span>읽은 책</span><b>${done.length.toLocaleString()}작품</b></div>
-      <div><span>읽은 권수</span><b>${vols.toLocaleString()}권</b></div>
-      <div><span>책값</span><b>${price.toLocaleString()}원</b></div>
-      <div><span>읽은 글자 수</span><b>${Math.round(chars*10000).toLocaleString()}자</b></div>`;
+  const cells=[['읽은 책',done.length,'작품'],['읽은 권수',vols,'권'],['책값',price,'원'],['읽은 글자 수',Math.round(chars*10000),'자']];
+  // 새로고침 직후나 전체/연간·연도가 바뀔 때만 0에서 올라가게 하고, 책을 고치거나 지울 때는 바로 값만 바꾼다
+  const key=sumMode+(sumMode==='year'?towerYear:'');
+  const animate=key!==sumKey&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  sumKey=key;
+  box.querySelector('.sum-row').innerHTML=cells.map(([l,n,u])=>`<div><span>${l}</span><b data-to="${n}" data-unit="${u}">${animate?0:n.toLocaleString()}${u}</b></div>`).join('');
+  cancelAnimationFrame(sumRaf); clearTimeout(sumTimer);
+  if(animate){
+    const bs=[...box.querySelectorAll('.sum-row b')], t0=performance.now(), DUR=1100;
+    bs.forEach(b=>{b.textContent='0'+b.dataset.unit});
+    const tick=now=>{
+      const p=Math.min(1,(now-t0)/DUR), e=1-Math.pow(1-p,3); // 처음엔 빠르게, 끝에서 천천히
+      bs.forEach(b=>{b.textContent=Math.round(+b.dataset.to*e).toLocaleString()+b.dataset.unit});
+      if(p<1) sumRaf=requestAnimationFrame(tick);
+    };
+    sumRaf=requestAnimationFrame(tick);
+    // 화면이 백그라운드라서 애니메이션이 멈춰도 최종 값은 반드시 정확히 표시한다
+    sumTimer=setTimeout(()=>bs.forEach(b=>{b.textContent=(+b.dataset.to).toLocaleString()+b.dataset.unit}),DUR+400);
+  }
 }
 
 function renderTabs(){
@@ -410,8 +431,8 @@ function renderTower(){
     <div class="tw-body">
       <div class="tower"><div class="floor"></div>${stack}<div class="rd"><div class="rd-num">${Math.round(total).toLocaleString()} 만자</div><div class="rd-msg">${tier[1]}</div></div></div>
       <div class="tw-info">
-        <div class="meta">${towerYear}년 완독 <b>${doneCount}권</b></div>
-        <div class="meta">월별 완독 권수</div>
+        <div class="meta hov">${towerYear}년 완독 <b>${doneCount}권</b></div>
+        <div class="meta hov">월별 완독 권수</div>
         <div class="months">${mc.map(n=>`<div style="height:${Math.round(n/mx*100)}%"><span>${n||''}</span></div>`).join('')}</div>
         <div class="mlab">${mc.map((_,i)=>`<span>${i+1}</span>`).join('')}</div>
         <div class="meta" style="margin-top:10px">글자 수가 없는 책은 권수 × 11만자로 추정해요. 점선 책은 읽는 중인 책이에요.</div>
