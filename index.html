@@ -383,7 +383,7 @@ function renderList(){
   $('#list').className=view==='album'?'album':'list';
   if(view==='album'){
     $('#list').innerHTML=l.map(b=>`<a class="alb" href="${ridiUrl(b)}" target="_blank" rel="noopener">
-      <div class="cover"><span class="ph">${esc(b.title)}</span>${(b.cvDays&&b.cvDays[b.end])||b.ridi?`<img src="${esc((b.cvDays&&b.cvDays[b.end])||('https://img.ridicdn.net/cover/'+encodeURIComponent(b.ridi)+'/xxlarge'))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
+      <div class="cover"><span class="ph">${esc(b.title)}</span>${b.ridi?`<img src="https://img.ridicdn.net/cover/${encodeURIComponent(b.ridi)}/xxlarge" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}</div>
       <div class="at">${esc(b.title)}</div>
       ${b.author?`<div class="aa">${esc(b.author)}</div>`:''}
       ${b.rating?`<div class="stars">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</div>`:''}
